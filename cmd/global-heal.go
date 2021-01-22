@@ -97,7 +97,7 @@ func getLocalBackgroundHealStatus() (madmin.BgHealState, bool) {
 }
 
 // healErasureSet lists and heals all objects in a specific erasure set
-func healErasureSet(ctx context.Context, setIndex int, buckets []BucketInfo, disks []StorageAPI) error {
+func healErasureSet(ctx context.Context, setIndex int, maxIO int, maxSleep time.Duration, buckets []BucketInfo, disks []StorageAPI) error {
 	// Get background heal sequence to send elements to heal
 	var bgSeq *healSequence
 	var ok bool
@@ -165,10 +165,17 @@ func healErasureSet(ctx context.Context, setIndex int, buckets []BucketInfo, dis
 			}
 
 			for _, version := range entry.Versions {
-				bgSeq.sourceCh <- healSource{
+				hsrc := healSource{
 					bucket:    bucket.Name,
 					object:    version.Name,
 					versionID: version.VersionID,
+				}
+				hsrc.throttle.maxIO = maxIO
+				hsrc.throttle.maxSleep = maxSleep
+				if err := bgSeq.queueHealTask(ctx, hsrc, madmin.HealItemObject); err != nil {
+					if !isErrObjectNotFound(err) && !isErrVersionNotFound(err) {
+						logger.LogIf(ctx, err)
+					}
 				}
 			}
 		}

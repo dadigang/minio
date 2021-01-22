@@ -184,6 +184,9 @@ var (
 	// global Listen system to send S3 API events to registered listeners
 	globalHTTPListen = pubsub.New()
 
+	// global Heal listen system to send Heal events to registered listeners
+	globalHTTPHeal = pubsub.New()
+
 	// global console system to send console logs to
 	// registered listeners
 	globalConsoleSys *HTTPConsoleLoggerSys
